@@ -3,18 +3,21 @@
 import { supabase } from "@/lib/supabase"
 import { useCallback, useEffect, useState } from "react";
 import { BarChart, Bar, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import Form from "@/components/Form";
+import InsertForm from "./InsertForm";
+import DealManager from "./DealManager";
+import { SalesDeal, SalesTotals } from "@/lib/types";
 
 
-interface SalesDeal {
-    name: string;
-    value: number;
-};
+
+// interface SalesTotal {
+//     name: string;
+//     value: number;
+// }
 
 export default function Dashboard()
 {
     const [ deals, setDeals ] = useState<SalesDeal[]>([]);
-    const [ totals, setTotals ] = useState<SalesDeal[]>([]);
+    const [ totals, setTotals ] = useState<SalesTotals[]>([]);
     const [ loading, setLoading ] = useState<boolean>(true);
     const [ error, setError ] = useState<string | null>(null);
 
@@ -26,8 +29,9 @@ export default function Dashboard()
                 try{
                     const p1 = await supabase
                                             .from("sales_deals")
-                                            .select("name, value")
-                                            .order("value", { ascending: false });
+                                            .select("id, name, value")
+                                            .order("id", { ascending: true }); // ← oldest first, newest last
+
                     const p2 = await supabase.from("sales_deals_quarterly_totals")
                                                 .select("name, value")
                                                 .order("value", { ascending: false });
@@ -110,7 +114,7 @@ export default function Dashboard()
         <div className="flex flex-col gap-8 mt-10 px-4"> 
 
             {/* ← horizontal row for charts */}
-            <div className="flex">
+            <div className="flex gap-6">
                 {/* first chart: All Deals */}
                 <div className="flex-1 border border-gray-200 rounded-lg p-4">
                     <h2 className="text-lg font-semibold mb-3">All sale deals ($)</h2>
@@ -156,7 +160,14 @@ export default function Dashboard()
                         {/* data={totals} feeds the aggregated totals array */}
                         <BarChart data={totals}>
                             <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" />
+                            <XAxis 
+                                dataKey="name" 
+                                angle={-60}
+                                textAnchor="end"
+                                height={80}
+                                tick={{ fontSize: 12 }}
+                                interval={0}
+                            />
                             <YAxis />
                             <Tooltip formatter={(value) => [`$${Number(value).toLocaleString()}`, "Revenue"]} />
                             <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
@@ -179,9 +190,10 @@ export default function Dashboard()
             </div>
 
             {/* Form for updating methods */}
-            <div className="flex flex-col gap-8 mt-10 px-4">
-                <Form fetchMetrics = {fetchMetrics} names={uniqueNames} />
-            </div>
+            <InsertForm names={uniqueNames} />
+            
+            {/* Manage existing deals */}
+            <DealManager deals={deals} />
 
         </div>
     )
